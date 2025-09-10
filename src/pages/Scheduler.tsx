@@ -351,9 +351,7 @@ function startDynamicSimulation(this: any) {
       const lf = stations.find((s: Station) => s.name === leaderSeq[leaderState.fromIndex]);
       const lt = stations.find((s: Station) => s.name === leaderSeq[leaderState.toIndex]);
       if (!lf || !lt) return;
-      const lkm = calculateDistance(lf.lat, lf.lng, lt.lat, lt.lng);
-      const lSpeedKmH = leaderName.toLowerCase().includes('express') ? 120 : leaderName.toLowerCase().includes('local') ? 80 : 60;
-      const lSegMin = (lkm / lSpeedKmH) * 60 + safetyMin;
+      // leader segment metrics not required for rolling headway computation
       // Rolling headway rule on same segment
       const decelRate = 0.6; // m/s^2
       const bufferKm = 1; // km
