@@ -4,7 +4,7 @@ import Controls from '../components/Controls';
 import TimetableView from '../components/Timetable';
 import TrackPanel from '../components/TrackPanel';
 import type { Station, Timetable } from '../lib';
-import { calculateDistance } from '../lib';
+import { calculateDistance, timeToMinutes, minutesToTime } from '../lib';
 import L from 'leaflet';
 
 export default function Scheduler() {
@@ -191,7 +191,7 @@ function skipToConflict() {
   app.sim.clock += 5;
 }
 
-type TrainState = { name: string; fromIndex: number; toIndex: number; progress: number; paused: boolean; delayMin: number; appliedDelayMin?: number; resumeTimer?: number | null; waitReason?: string };
+type TrainState = { name: string; fromIndex: number; toIndex: number; progress: number; paused: boolean; delayMin: number; appliedDelayMin?: number; resumeTimer?: number | null; waitReason?: string; startAtMin?: number; plannedSpeedKmH?: number; currentSpeedKmH?: number; nearProximity?: boolean; lastLabel?: string };
 
 function getTrainColorAndSize(name: string): { color: string; size: number } {
   const lower = name.toLowerCase();
@@ -211,7 +211,8 @@ function pauseTrain(_app: any, st: TrainState, marker: L.Marker, delayMins: numb
   st.waitReason = reason;
   const root = marker.getElement();
   if (root) root.classList.add('pulsing');
-  updateMarkerLabel(marker, `${st.name} | Waiting for ${reason} (+${st.delayMin}m)`);
+  const newText = `${st.name} | Waiting for ${reason}${delayMins>0?` (+${st.delayMin}m)`:''}`;
+  if (st.lastLabel !== newText) { updateMarkerLabel(marker, newText); st.lastLabel = newText; }
 }
 function resumeTrain(_app: any, st: TrainState, marker: L.Marker) {
   st.paused = false;
@@ -220,7 +221,7 @@ function resumeTrain(_app: any, st: TrainState, marker: L.Marker) {
   if (root) root.classList.remove('pulsing');
   // No delay propagation or label minutes
   st.waitReason = undefined;
-  updateMarkerLabel(marker, `${st.name}`);
+  if (st.lastLabel !== st.name) { updateMarkerLabel(marker, `${st.name}`); st.lastLabel = st.name; }
 }
 function startDynamicSimulation(this: any) {
   const app = (window as any).__app as any;
@@ -240,7 +241,21 @@ function startDynamicSimulation(this: any) {
   app.animWrappers = [];
   app.animMarkers = [];
   const trainNames = Object.keys(tt.timetable);
-  const states: TrainState[] = trainNames.map((name) => ({ name, fromIndex: 0, toIndex: 1, progress: 0, paused: false, delayMin: 0, resumeTimer: null }));
+  // Align simulation start times with timetable first departure
+  const firstDeps: Record<string, number> = {};
+  let minFirst = Number.POSITIVE_INFINITY;
+  trainNames.forEach((name) => {
+    const seq = Object.keys(tt.timetable[name].stations);
+    const firstStation = seq[0];
+    const dep = tt.timetable[name].stations[firstStation]?.departure;
+    const depMin = dep ? timeToMinutes(dep) : 0;
+    firstDeps[name] = depMin;
+    if (depMin < minFirst) minFirst = depMin;
+  });
+  const states: TrainState[] = trainNames.map((name) => {
+    const planned = name.toLowerCase().includes('express') ? 120 : name.toLowerCase().includes('local') ? 80 : 60;
+    return { name, fromIndex: 0, toIndex: 1, progress: 0, paused: false, delayMin: 0, resumeTimer: null, startAtMin: Math.max(0, (firstDeps[name] ?? 0) - (isFinite(minFirst) ? minFirst : 0)), plannedSpeedKmH: planned, currentSpeedKmH: planned } as TrainState;
+  });
   app.sim = { states, raf: 0, clock: 0 };
   const trains = Object.keys(tt.timetable);
   trains.forEach((name: string) => {
@@ -268,16 +283,24 @@ function startDynamicSimulation(this: any) {
     const currentSpeed = Math.max(0.25, app.speed ?? speed);
     const simMin = dt * (10 * currentSpeed) / 1000;
     app.sim.clock += simMin;
+    const positions: Array<{ idx: number; name: string; lat: number; lng: number } | null> = new Array(states.length).fill(null);
     states.forEach((st: TrainState, idx: number) => {
       const name = st.name;
       const seq = Object.keys(tt.timetable[name].stations);
       if (st.toIndex >= seq.length) return;
+      // Wait until the train's scheduled start time at the first station
+      if ((st as any).startAtMin != null && app.sim.clock < (st as any).startAtMin) {
+        const m = app.animMarkers[idx] as L.Marker;
+        const el = (m.getElement()?.querySelector('div div + div') as HTMLDivElement) || null;
+        if (el) el.textContent = `${name} | Starts ${minutesToTime(((firstDeps[name] ?? 0)) % (24*60))}`;
+        return;
+      }
       if (st.paused) return;
       const from = stations.find((s: Station) => s.name === seq[st.fromIndex]);
       const to = stations.find((s: Station) => s.name === seq[st.toIndex]);
       if (!from || !to) return;
       const km = calculateDistance(from.lat, from.lng, to.lat, to.lng);
-      const speedKmH = name.toLowerCase().includes('express') ? 120 : name.toLowerCase().includes('local') ? 80 : 60;
+      const speedKmH = Math.max(1, st.currentSpeedKmH ?? st.plannedSpeedKmH ?? (name.toLowerCase().includes('express') ? 120 : name.toLowerCase().includes('local') ? 80 : 60));
       const segMin = (km / speedKmH) * 60 + safetyMin;
       st.progress += simMin / Math.max(segMin, 0.1);
       if (st.progress >= 1) {
@@ -297,8 +320,13 @@ function startDynamicSimulation(this: any) {
       const lng = from.lng + (to.lng - from.lng) * st.progress;
       const m = app.animMarkers[idx] as L.Marker;
       m.setLatLng([lat, lng]);
-      const el = (m.getElement()?.querySelector('div div + div') as HTMLDivElement) || null;
-      if (el && !st.paused) el.textContent = `${name}`;
+      if (!st.paused) {
+        if (st.lastLabel !== name) {
+          const el = (m.getElement()?.querySelector('div div + div') as HTMLDivElement) || null;
+          if (el) { el.textContent = `${name}`; st.lastLabel = name; }
+        }
+      }
+      positions[idx] = { idx, name, lat, lng };
     });
     const onSameSeg: Record<string, number[]> = {};
     states.forEach((st: TrainState, idx: number) => {
@@ -328,16 +356,56 @@ function startDynamicSimulation(this: any) {
       const lSegMin = (lkm / lSpeedKmH) * 60 + safetyMin;
       const leaderRemainingMin = Math.max(0, (1 - leaderState.progress) * Math.max(lSegMin, 0.1));
       const msPerSimMin = 1000 / (10 * currentSpeed);
+      // Rolling headway rule on same segment
+      const decelRate = 0.6; // m/s^2
+      const bufferKm = 1; // km
       indices.slice(1).forEach(i => {
-        const st = states[i];
-        const m = app.animMarkers[i] as L.Marker;
-        const reason = leaderName.toLowerCase().includes('express') ? 'Express' : 'higher priority';
-        if (!st.paused) { pauseTrain(app, st, m, Math.ceil(leaderRemainingMin), reason); }
-        else { updateMarkerLabel(m, `${st.name} | Waiting for ${reason}`); }
-        if (st.resumeTimer) { clearTimeout(st.resumeTimer as number); st.resumeTimer = null; }
-        // wait in real time proportional to remaining simulated minutes
-        st.resumeTimer = window.setTimeout(() => { resumeTrain(app, st, m); }, Math.max(50, leaderRemainingMin * msPerSimMin));
+        const follower = states[i];
+        const posLead = positions[leader];
+        const posFol = positions[i];
+        if (!posLead || !posFol) return;
+        const distanceKm = calculateDistance(posLead.lat, posLead.lng, posFol.lat, posFol.lng);
+        const planned = Math.max(1, follower.plannedSpeedKmH || 1);
+        // safe distance in km: v^2/(2a) with v in m/s → km; plus buffer
+        const vms = planned * 1000 / 3600;
+        const safeDistKm = (vms * vms) / (2 * decelRate) / 1000 + bufferKm;
+        const ratio = Math.max(0, Math.min(1, distanceKm / Math.max(0.001, safeDistKm)));
+        const target = planned * ratio;
+        // Smooth change (first-order filter)
+        const prev = follower.currentSpeedKmH ?? planned;
+        follower.currentSpeedKmH = prev + (target - prev) * 0.2;
       });
+    });
+
+    // Proximity-based yielding (distance threshold)
+    const proximityKm = 5; // adjustable buffer distance
+    const isNear: boolean[] = new Array(states.length).fill(false);
+    for (let i = 0; i < positions.length; i++) {
+      const a = positions[i];
+      if (!a) continue;
+      for (let j = i + 1; j < positions.length; j++) {
+        const b = positions[j];
+        if (!b) continue;
+        const d = calculateDistance(a.lat, a.lng, b.lat, b.lng);
+        if (d <= proximityKm) {
+          isNear[i] = true; isNear[j] = true;
+          const priA = (tt as any).priority?.[a.name] ?? (a.name.toLowerCase().includes('express') ? 1 : a.name.toLowerCase().includes('local') ? 2 : 3);
+          const priB = (tt as any).priority?.[b.name] ?? (b.name.toLowerCase().includes('express') ? 1 : b.name.toLowerCase().includes('local') ? 2 : 3);
+          const loserIdx = priA <= priB ? j : i;
+          const st = states[loserIdx];
+          if (!st.paused || st.waitReason !== 'proximity') {
+            const m = app.animMarkers[loserIdx] as L.Marker;
+            pauseTrain(app, st, m, 0, 'proximity');
+          }
+        }
+      }
+    }
+    // Resume trains paused for proximity when clear
+    states.forEach((st, idx) => {
+      if (st.paused && st.waitReason === 'proximity' && !isNear[idx]) {
+        const m = app.animMarkers[idx] as L.Marker;
+        resumeTrain(app, st, m);
+      }
     });
     app.sim.raf = requestAnimationFrame(tick);
   };
