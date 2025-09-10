@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { Station, Train, Timetable, TrainPlan } from '../lib';
-import { generateLocalTimetable, generateTimetableWithRoutes } from '../lib';
+import type { Station, Timetable, TrainPlan } from '../lib';
+import { generateTimetableWithRoutes } from '../lib';
 
 type Props = {
   stations: Station[];
@@ -10,7 +10,7 @@ type Props = {
   catalogStations?: { name: string; lat: number; lng: number }[];
 };
 
-export default function Controls({ stations, onTimetable, setStatus, onSearchSelect, catalogStations }: Props) {
+export default function Controls({ stations, onTimetable, setStatus, onSearchSelect }: Props) {
   // Simple form fields instead of JSON
   const [expressSpeed, setExpressSpeed] = useState(120);
   const [localSpeed, setLocalSpeed] = useState(80);

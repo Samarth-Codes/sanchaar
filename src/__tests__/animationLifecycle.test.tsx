@@ -7,7 +7,6 @@ vi.stubGlobal('performance', { now: () => Date.now() });
 
 // Minimal mocks to allow render without mounting a real map
 vi.mock('leaflet', async () => {
-  const add = vi.fn().mockReturnThis();
   const setLatLng = vi.fn().mockReturnThis();
   const remove = vi.fn();
   const getElement = vi.fn(() => ({ querySelector: () => ({ textContent: '' }) }));

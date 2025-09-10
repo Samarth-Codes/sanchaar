@@ -8,7 +8,7 @@ import type { TrainScheduleResponse } from '../api/railradar';
 
 type Scenario = { name: string; timetable: Timetable; optimized?: boolean };
 
-export default function PravahSim({ stations, basePlans, onStatus }: { stations: Station[]; basePlans: any[]; onStatus?: (msg: string) => void }) {
+export default function PravahSim({ stations, basePlans }: { stations: Station[]; basePlans: any[]; onStatus?: (msg: string) => void }) {
   const [map, setMap] = useState<L.Map | null>(null as any);
   const [speed, setSpeed] = useState(1);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
