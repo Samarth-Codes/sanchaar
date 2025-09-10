@@ -181,12 +181,12 @@ export default function Controls({ stations, onTimetable, setStatus, onSearchSel
           </button>
         </div>
         {!!apiSuggestions.length && (
-          <div className="mt-2 rounded-md border border-gray-200">
-            <div className="px-3 py-2 text-xs text-slate-600">Suggestions (click Use to add)</div>
-            <ul className="max-h-36 overflow-auto divide-y divide-gray-100">
+          <div className="mt-2 rounded-md border border-gray-200 bg-white">
+            <div className="px-3 py-2 text-xs text-slate-700">Suggestions (click Use to add)</div>
+            <ul className="max-h-36 overflow-auto divide-y divide-gray-100 text-slate-800">
               {apiSuggestions.map((s, i) => (
                 <li key={`${s.name}-${i}`} className="px-3 py-2 flex items-center justify-between gap-2 text-sm">
-                  <span className="truncate" title={`${s.name} — ${s.lat?.toFixed?.(4) ?? ''}, ${s.lng?.toFixed?.(4) ?? ''}`}>{s.name}</span>
+                  <span className="truncate text-slate-800" title={`${s.name} — ${s.lat?.toFixed?.(4) ?? ''}, ${s.lng?.toFixed?.(4) ?? ''}`}>{s.name}</span>
                   <button
                     className="shrink-0 px-2 h-7 rounded bg-slate-200 text-slate-800 hover:bg-slate-100"
                     onClick={() => onSearchSelect?.(s.name, (s.lat && s.lng) ? { lat: s.lat, lng: s.lng } : undefined)}

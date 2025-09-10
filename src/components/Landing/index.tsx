@@ -1,12 +1,12 @@
 import Hero from './Hero';
 import Features from './Features';
-import CTA from './CTA';
-import Stats from './Stats';
+// import CTA from './CTA';
+// import Stats from './Stats';
 
 function ModuleSanchaar() {
   return (
-    <section className="rounded-xl border border-[#e5e7eb] bg-white p-6">
-      <h3 className="text-xl font-semibold text-[#0b2545]">Module 2: Sanchaar — Optimization Module</h3>
+    <section className="rounded-xl border border-[#34989c] bg-[#f8f8f8] p-6">
+      <h3 className="text-xl font-semibold text-[#0b2545]">Sanchaar — Optimization</h3>
       <p className="text-[#475569] mt-2">This module improves <strong>punctuality</strong> and <strong>network efficiency</strong> across the corridor.</p>
       <div className="mt-3 text-[#334155]">
         <div className="font-semibold text-[#0b2545]">Dynamic Scheduling</div>
@@ -18,7 +18,7 @@ function ModuleSanchaar() {
 
 export default function LandingPage() {
   return (
-    <div className="space-y-8 polka-bg">
+    <div className="space-y-10">
       <Hero />
       <ModuleSanchaar />
       <Features />

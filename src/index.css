@@ -51,9 +51,10 @@ body { margin: 0; min-width: 320px; min-height: 100vh; display: block; }
 
 /* Polka dot utility for subtle background */
 .polka-bg {
-  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-  background-size: 12px 12px;
-  background-position: 0 0;
+  /* Single centered polka dot with wider spacing to avoid paired look */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='1' fill='%23cbd5e1'/></svg>");
+  background-size: 16px 16px;
+  background-repeat: repeat;
 }
 
 @keyframes pulseGradient {
