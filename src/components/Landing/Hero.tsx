@@ -4,7 +4,7 @@ export default function Hero() {
   return (
     <section className="flex flex-col md:flex-row items-center gap-10">
       <div className="flex-1">
-        <h1 className="text-5xl md:text-6xl font-extrabold text-[#0b2545] tracking-tight">Sanchaar</h1>
+        <h1 className="text-5xl md:text-6xl font-extrabold text-[#0b2545] tracking-tight" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Sanchaar</h1>
         <p className="text-[#334155] mt-4 md:mt-5 max-w-2xl text-lg">Optimize and visualize Indian Railways network schedules with clear timelines, conflict resolution, and intuitive controls.</p>
         <div className="mt-5 flex gap-3">
           <Link
