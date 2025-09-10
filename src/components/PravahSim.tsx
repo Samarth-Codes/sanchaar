@@ -15,7 +15,6 @@ export default function PravahSim({ stations, basePlans }: { stations: Station[]
   const [activeIdx, setActiveIdx] = useState(0);
   const [trainQuery, setTrainQuery] = useState('');
   const [trainResults, setTrainResults] = useState<{ trainNumber: string; name: string; type: string }[]>([]);
-  const [selectedTrains, setSelectedTrains] = useState<string[]>([]);
   const [livePoll, setLivePoll] = useState<boolean>(false);
   const presets = [
     { name: 'Express – Rajdhani', speed: 120, priority: 1, startTime: '08:00' },
@@ -119,7 +118,6 @@ export default function PravahSim({ stations, basePlans }: { stations: Station[]
             <div key={`res-${t.trainNumber}`} className="flex items-center justify-between py-1 border-b border-slate-800">
               <div>{t.trainNumber} — {t.name}</div>
               <button className="px-2 h-7 rounded bg-sky-700" onClick={async () => {
-                setSelectedTrains(prev => prev.includes(t.trainNumber) ? prev : [...prev, t.trainNumber]);
                 const today = new Date(); const dateISO = today.toISOString().slice(0,10);
                 const sched: TrainScheduleResponse = await rrGetTrainSchedule(t.trainNumber, dateISO);
                 // Convert schedule to our Timetable shape
