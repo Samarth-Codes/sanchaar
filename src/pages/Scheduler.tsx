@@ -354,8 +354,6 @@ function startDynamicSimulation(this: any) {
       const lkm = calculateDistance(lf.lat, lf.lng, lt.lat, lt.lng);
       const lSpeedKmH = leaderName.toLowerCase().includes('express') ? 120 : leaderName.toLowerCase().includes('local') ? 80 : 60;
       const lSegMin = (lkm / lSpeedKmH) * 60 + safetyMin;
-      const leaderRemainingMin = Math.max(0, (1 - leaderState.progress) * Math.max(lSegMin, 0.1));
-      const msPerSimMin = 1000 / (10 * currentSpeed);
       // Rolling headway rule on same segment
       const decelRate = 0.6; // m/s^2
       const bufferKm = 1; // km
